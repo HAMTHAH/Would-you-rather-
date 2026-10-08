@@ -81,14 +81,19 @@ QUESTIONS = [
 # FORMAT QUESTION
 # =========================================================
 
-def question_text(question):
+def question_text(question, status_text=None):
     a, b = question
 
-    return (
+    text = (
         "🎮 <b>WOULD YOU RATHER</b>\n\n"
         f"🔴 <b>{a}</b>\n\n"
         f"🔵 <b>{b}</b>"
     )
+
+    if status_text:
+        text += f"\n\n🔥 <b>{status_text}</b>"
+
+    return text
 
 
 def answer_keyboard(game_id):
@@ -119,8 +124,6 @@ async def inline_query(update: Update, context):
     games[game_id] = {
         "question": question,
         "answers": {},
-        "message_id": None,
-        "chat_id": None,
     }
 
     result = InlineQueryResultArticle(
@@ -177,7 +180,10 @@ async def answer(update: Update, context):
         )
         return
 
-    # Save answer
+    # -----------------------------------------------------
+    # SAVE ANSWER
+    # -----------------------------------------------------
+
     game["answers"][user.id] = {
         "name": user.first_name,
         "choice": choice,
@@ -193,8 +199,16 @@ async def answer(update: Update, context):
 
     if len(game["answers"]) == 1:
 
+        # Get the person who just answered
+        player_name = user.first_name
+
+        # KEEP THE SAME QUESTION/PANEL
+        # Just add a small status message
         await query.edit_message_text(
-            question_text(game["question"]),
+            question_text(
+                game["question"],
+                f"{player_name} chose their answer"
+            ),
             parse_mode="HTML",
             reply_markup=answer_keyboard(game_id),
         )
@@ -247,37 +261,64 @@ async def next_question(update: Update, context):
 
     query = update.callback_query
 
-    game_id = query.data.split(":", 1)[1]
+    old_game_id = query.data.split(":", 1)[1]
 
-    if game_id not in games:
+    if old_game_id not in games:
         await query.answer(
             "❌ Game expired.",
             show_alert=True,
         )
         return
 
-    game = games[game_id]
+    old_game = games[old_game_id]
 
-    # Generate a different question
-    old_question = game["question"]
+    # -----------------------------------------------------
+    # CREATE A COMPLETELY NEW GAME/PANEL
+    # -----------------------------------------------------
+
+    new_game_id = str(uuid.uuid4())
+
+    old_question = old_game["question"]
 
     possible = [
         q for q in QUESTIONS
         if q != old_question
     ]
 
-    game["question"] = random.choice(possible)
+    new_question = random.choice(possible)
 
-    # Clear previous answers
-    game["answers"] = {}
+    games[new_game_id] = {
+        "question": new_question,
+        "answers": {},
+    }
 
     await query.answer()
 
-    await query.edit_message_text(
-        question_text(game["question"]),
-        parse_mode="HTML",
-        reply_markup=answer_keyboard(game_id),
-    )
+    # -----------------------------------------------------
+    # IMPORTANT:
+    # We DO NOT edit the old result panel.
+    #
+    # Telegram inline messages cannot create a brand-new
+    # message directly from a callback button, so we send
+    # the new question as a new message to the same chat.
+    # -----------------------------------------------------
+
+    if query.message:
+        try:
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=question_text(new_question),
+                parse_mode="HTML",
+                reply_markup=answer_keyboard(new_game_id),
+            )
+        except Exception:
+            # Inline messages don't always expose a normal
+            # chat_id. In that case, tell the user how to
+            # start another panel.
+            await query.answer(
+                "Use @wouldyouratherobot again for a new panel.",
+                show_alert=True,
+            )
 
 
 # =========================================================
