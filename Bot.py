@@ -1,8 +1,6 @@
 import os
 import random
 import uuid
-import html
-import logging
 
 from telegram import (
     Update,
@@ -23,322 +21,177 @@ from telegram.ext import (
 # SETTINGS
 # =========================================================
 
-BOT_TOKEN = os.environ["BOT_TOKEN"]
+TOKEN = os.environ["BOT_TOKEN"]
 
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
-)
+# Active games
+games = {}
 
 # =========================================================
 # WOULD YOU RATHER QUESTIONS
 # =========================================================
 
 QUESTIONS = [
-    ("Would you rather", "be able to read minds", "be able to see the future"),
-    ("Would you rather", "never use social media again", "never watch movies again"),
-    ("Would you rather", "be rich but unknown", "be famous but only moderately wealthy"),
-    ("Would you rather", "travel the world for free", "have a dream house for free"),
-    ("Would you rather", "always know when someone is lying", "always get away with lying"),
-    ("Would you rather", "have your crush read your mind", "read your crush's mind"),
-    ("Would you rather", "send your crush a risky text", "call your crush unexpectedly"),
-    ("Would you rather", "go on a surprise date", "plan every detail of the date"),
-    ("Would you rather", "kiss your crush first", "wait for your crush to make the first move"),
-    ("Would you rather", "have your best friend choose your date", "choose your best friend's date"),
-    ("Would you rather", "be stuck on a date with your ex", "be stuck on a date with someone you hate"),
-    ("Would you rather", "have unlimited money for one year", "have unlimited free travel for life"),
-    ("Would you rather", "be extremely attractive", "be extremely charming"),
-    ("Would you rather", "have perfect confidence", "have perfect looks"),
-    ("Would you rather", "know exactly who likes you", "know exactly who dislikes you"),
-    ("Would you rather", "receive a romantic message every morning", "receive a surprise gift every week"),
-    ("Would you rather", "have your crush call you at midnight", "have your crush show up at your door"),
-    ("Would you rather", "go on a beach date", "go on a rooftop date"),
-    ("Would you rather", "have a secret admirer", "have a secret crush"),
-    ("Would you rather", "flirt with someone you just met", "flirt with someone you've known for years"),
-    ("Would you rather", "have your partner know your entire search history", "have them know every message you've ever sent"),
-    ("Would you rather", "lose your phone for a week", "lose your wallet for a week"),
-    ("Would you rather", "be caught staring at your crush", "be caught talking about your crush"),
-    ("Would you rather", "accidentally text your crush something embarrassing", "accidentally text your parents something embarrassing"),
-    ("Would you rather", "have your funniest moment go viral", "have your most embarrassing moment go viral"),
-    ("Would you rather", "always say exactly what you're thinking", "never be able to explain yourself"),
-    ("Would you rather", "have one perfect relationship", "have many exciting relationships"),
-    ("Would you rather", "fall in love instantly", "fall in love slowly"),
-    ("Would you rather", "date someone extremely romantic", "date someone extremely funny"),
-    ("Would you rather", "have a partner who texts constantly", "have a partner who rarely texts"),
-    ("Would you rather", "be the jealous one", "have a jealous partner"),
-    ("Would you rather", "know your partner's biggest secret", "have them know yours"),
-    ("Would you rather", "go on a spontaneous road trip", "have a luxury vacation planned for you"),
-    ("Would you rather", "dance in public with your crush", "sing in public with your crush"),
-    ("Would you rather", "get a surprise kiss", "give a surprise kiss"),
-    ("Would you rather", "have your crush compliment you", "have your crush flirt with you"),
-    ("Would you rather", "be able to pause time", "be able to rewind time"),
-    ("Would you rather", "have unlimited food", "have unlimited money"),
-    ("Would you rather", "live in a mansion alone", "live in a small house with your favorite people"),
-    ("Would you rather", "be extremely lucky", "be extremely intelligent"),
-    ("Would you rather", "never get embarrassed", "never get rejected"),
-    ("Would you rather", "know your future partner's name", "know when you'll meet them"),
-    ("Would you rather", "have your crush confess first", "confess first yourself"),
-    ("Would you rather", "get flowers every week", "get chocolates every week"),
-    ("Would you rather", "have a romantic dinner", "have a romantic movie night"),
-    ("Would you rather", "be stuck in an elevator with your crush", "be stuck in traffic with your crush"),
-    ("Would you rather", "have your crush call you cute", "have them call you attractive"),
-    ("Would you rather", "have one unforgettable date", "have many good dates"),
-    ("Would you rather", "be someone's first love", "be someone's last love"),
-    ("Would you rather", "have a partner who is very protective", "have a partner who is very independent"),
-    ("Would you rather", "always win arguments", "always avoid arguments"),
-    ("Would you rather", "know every secret about your friends", "have none of your secrets known"),
-    ("Would you rather", "have your crush accidentally see your notes about them", "have them hear you talking about them"),
-    ("Would you rather", "go on a date without knowing where you're going", "choose exactly where you go"),
-    ("Would you rather", "receive a handwritten love letter", "receive a long romantic text"),
-    ("Would you rather", "have your crush remember every little detail about you", "have them surprise you constantly"),
-    ("Would you rather", "have an adventurous partner", "have a calm partner"),
-    ("Would you rather", "date someone who makes you laugh", "date someone who makes you feel safe"),
-    ("Would you rather", "have your best friend as your roommate", "have your crush as your roommate"),
-    ("Would you rather", "have unlimited confidence", "have unlimited charisma"),
-    ("Would you rather", "be able to make anyone laugh", "be able to make anyone like you"),
-    ("Would you rather", "have your crush send the first message", "have them call you first"),
-    ("Would you rather", "go dancing together", "cook together"),
-    ("Would you rather", "watch the sunrise together", "watch the sunset together"),
-    ("Would you rather", "have a surprise birthday party", "have a surprise romantic date"),
-    ("Would you rather", "always know what gift to buy", "always know what to say"),
-    ("Would you rather", "have a partner who is extremely honest", "have one who is extremely understanding"),
-    ("Would you rather", "be able to teleport anywhere", "fly anywhere"),
-    ("Would you rather", "have your dream job", "have your dream relationship"),
-    ("Would you rather", "be rich at 20", "be successful at 40"),
-    ("Would you rather", "never have to sleep", "never have to eat"),
-    ("Would you rather", "be able to speak every language", "be able to play every instrument"),
-    ("Would you rather", "have a perfect memory", "have unlimited creativity"),
-    ("Would you rather", "always be early", "always be exactly on time"),
-    ("Would you rather", "have everyone admire you", "have a few people deeply love you"),
-    ("Would you rather", "have your crush know you like them", "keep your crush guessing"),
-    ("Would you rather", "be the one who makes the first move", "wait and see what happens"),
-    ("Would you rather", "get a good morning text", "get a good night text"),
-    ("Would you rather", "have a romantic nickname", "have a funny nickname"),
-    ("Would you rather", "go on a fancy dinner date", "have a simple late-night date"),
-    ("Would you rather", "be with someone adventurous", "be with someone mysterious"),
-    ("Would you rather", "have a partner who is your best friend", "have a partner who challenges you"),
-    ("Would you rather", "have your crush compliment your personality", "compliment your appearance"),
-    ("Would you rather", "have one secret relationship", "have one public relationship"),
-    ("Would you rather", "have your partner plan everything", "plan everything yourself"),
-    ("Would you rather", "get caught flirting", "get caught checking someone's profile"),
-    ("Would you rather", "have your crush sit next to you", "have them sit across from you"),
-    ("Would you rather", "have a funny partner", "have a romantic partner"),
-    ("Would you rather", "spend a whole day together", "spend one amazing hour together"),
-    ("Would you rather", "have a partner who texts you memes", "texts you compliments"),
-    ("Would you rather", "be someone's biggest crush", "be someone's biggest regret"),
-    ("Would you rather", "have a perfect first date", "have an unforgettable second date"),
-    ("Would you rather", "have your crush surprise you", "surprise your crush"),
-    ("Would you rather", "be known as mysterious", "be known as charming"),
-    ("Would you rather", "have your crush stare at you", "have them smile at you"),
-    ("Would you rather", "get a secret admirer letter", "get an anonymous gift"),
-    ("Would you rather", "know who your soulmate is", "know when you'll meet them"),
-    ("Would you rather", "have your crush ask you out", "have them ask for your number"),
-    ("Would you rather", "go on a midnight adventure", "have a lazy day together"),
-    ("Would you rather", "have a partner who remembers everything", "have one who forgives everything"),
-    ("Would you rather", "have someone fall for you first", "fall for someone first"),
-    ("Would you rather", "be impossible to forget", "be impossible to replace"),
+    ("Would you rather kiss your crush in front of everyone 😳",
+     "or let your crush read your private messages 📱?"),
+
+    ("Would you rather know who secretly likes you ❤️",
+     "or know who secretly hates you 😈?"),
+
+    ("Would you rather go on a date with your crush 💕",
+     "or get $1,000,000 💰?"),
+
+    ("Would you rather accidentally text your crush 'I love you' 😭",
+     "or accidentally send them your search history 💀?"),
+
+    ("Would you rather be extremely attractive 😏",
+     "or extremely rich 💰?"),
+
+    ("Would you rather have your crush kiss you 💋",
+     "or have your crush confess their feelings ❤️?"),
+
+    ("Would you rather lose your phone for a week 📱",
+     "or lose the internet for a month 🌐?"),
+
+    ("Would you rather be able to read minds 🧠",
+     "or become invisible 👻?"),
+
+    ("Would you rather have your ex text 'I miss you' 😳",
+     "or your crush text 'I want you' 🔥?"),
+
+    ("Would you rather reveal your biggest secret 🤐",
+     "or reveal your biggest crush 😳?"),
+
+    ("Would you rather spend one night with your celebrity crush ⭐",
+     "or receive $100,000 💰?"),
+
+    ("Would you rather never be able to lie again 😇",
+     "or have everyone know when you're lying 🤥?"),
+
+    ("Would you rather have unlimited money 💰",
+     "or unlimited free time 😎?"),
+
+    ("Would you rather accidentally like your crush's old photo 😭",
+     "or accidentally comment on it '😍' 💀?"),
+
+    ("Would you rather have your crush call you at midnight 🌙",
+     "or wake up to a romantic message ❤️?"),
+
+    ("Would you rather be stuck in an elevator with your crush 😏",
+     "or stuck in a car with your ex 😭?"),
+
+    ("Would you rather date someone extremely jealous 😈",
+     "or someone who never gets jealous 😐?"),
+
+    ("Would you rather know your partner's entire past 👀",
+     "or have them know yours?"),
+
+    ("Would you rather get caught flirting 😳",
+     "or get caught lying about flirting 💀?"),
+
+    ("Would you rather have your crush see you naked 😳",
+     "or hear every thought you've ever had about them 🧠?"),
+
+    ("Would you rather always know when someone is lying 🤥",
+     "or always get away with lying 😈?"),
+
+    ("Would you rather have your first kiss again 💋",
+     "or your best kiss again 🔥?"),
+
+    ("Would you rather be famous worldwide 🌎",
+     "or completely anonymous but extremely rich 💰?"),
+
+    ("Would you rather date your best friend ❤️",
+     "or never date anyone again 😭?"),
+
+    ("Would you rather receive a surprise kiss 💋",
+     "or give someone a surprise kiss 😏?"),
+
+    ("Would you rather have your crush call you beautiful 😍",
+     "or tell you they can't stop thinking about you ❤️?"),
+
+    ("Would you rather accidentally send a spicy photo to your family 😭",
+     "or to your boss 💀?"),
+
+    ("Would you rather have your partner know your passwords 🔐",
+     "or your entire search history 📱?"),
+
+    ("Would you rather spend Valentine's Day alone 😭",
+     "or with someone you don't love 😐?"),
+
+    ("Would you rather have your crush reject you 💔",
+     "or never know if they liked you?"),
+
+    ("Would you rather kiss someone you don't like 😳",
+     "or never kiss anyone again?"),
+
+    ("Would you rather have one perfect relationship ❤️",
+     "or date lots of people but never fall in love?"),
+
+    ("Would you rather have your crush walk in while you're changing 😳",
+     "or walk in while they're changing 👀?"),
+
+    ("Would you rather know exactly who your soulmate is ❤️",
+     "or never know but eventually meet them?"),
+
+    ("Would you rather be able to teleport anywhere 🌎",
+     "or pause time ⏸️?"),
+
+    ("Would you rather have $10 million 💰",
+     "or find your soulmate tomorrow ❤️?"),
+
+    ("Would you rather always be 10 minutes late ⏰",
+     "or always be 30 minutes early?"),
+
+    ("Would you rather be extremely funny 😂",
+     "or extremely attractive 😏?"),
+
+    ("Would you rather have your crush call you every night 🌙",
+     "or text you all day 📱?"),
+
+    ("Would you rather confess your feelings first ❤️",
+     "or wait for them to confess?"),
 ]
 
 # =========================================================
-# ACTIVE GAMES
+# START MESSAGE
 # =========================================================
 
-games = {}
-
-
-# =========================================================
-# HELPERS
-# =========================================================
-
-def new_question():
-    return random.choice(QUESTIONS)
-
-
-def player_name(user):
-    return user.first_name or user.username or "Player"
-
-
-def game_text(game):
-    p1 = html.escape(game["p1_name"])
-    p2 = html.escape(game["p2_name"])
-
-    question, option_a, option_b = game["question"]
-
-    answers = game["answers"]
-
-    if game["status"] == "waiting":
-        return (
-            "🎮 <b>WOULD YOU RATHER</b>\n\n"
-            f"👤 <b>Player 1:</b> {p1}\n"
-            "👤 <b>Player 2:</b> Waiting...\n\n"
-            "🔥 <b>Game created!</b>\n\n"
-            "<i>Send this inline game to the person you're playing with, "
-            "then they can tap JOIN GAME.</i>"
-        )
-
-    if game["status"] == "playing":
-        answered = []
-
-        if game["p1_id"] in answers:
-            answered.append(p1)
-
-        if game["p2_id"] in answers:
-            answered.append(p2)
-
-        status = ""
-
-        if len(answered) == 1:
-            status = (
-                f"\n\n<i>{html.escape(answered[0])} has answered. "
-                "Waiting for the other player...</i>"
+def start_keyboard():
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                "🎮 START GAME",
+                callback_data="create_game"
             )
-        else:
-            status = "\n\n<i>Choose A or B. Your answer stays hidden.</i>"
-
-        return (
-            f"🔥 <b>WOULD YOU RATHER — ROUND {game['round']}</b>\n\n"
-            f"👤 {p1}\n"
-            f"👤 {p2}\n\n"
-            f"<b>{html.escape(question)}</b>\n\n"
-            f"🔥 <b>A)</b> {html.escape(option_a)}\n"
-            f"😈 <b>B)</b> {html.escape(option_b)}"
-            f"{status}"
-        )
-
-    if game["status"] == "results":
-        answer1 = answers.get(game["p1_id"], "?")
-        answer2 = answers.get(game["p2_id"], "?")
-
-        a1 = "A" if answer1 == "A" else "B"
-        a2 = "A" if answer2 == "A" else "B"
-
-        return (
-            f"🔥 <b>WOULD YOU RATHER — ROUND {game['round']}</b>\n\n"
-            f"<b>{html.escape(question)}</b>\n\n"
-            f"👤 <b>{p1}</b> chose <b>{a1}</b>\n"
-            f"👤 <b>{p2}</b> chose <b>{a2}</b>\n\n"
-            "😂 <i>Both answers revealed!</i>"
-        )
-
-    return "🛑 <b>GAME ENDED</b>"
-
-
-def game_keyboard(game):
-    if game["status"] == "waiting":
-        return InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton(
-                    "🎮 JOIN GAME",
-                    callback_data=f"join:{game['id']}"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "🛑 LEAVE",
-                    callback_data=f"leave:{game['id']}"
-                )
-            ],
-        ])
-
-    if game["status"] == "playing":
-        return InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton(
-                    "🔥 A",
-                    callback_data=f"a:{game['id']}"
-                ),
-                InlineKeyboardButton(
-                    "😈 B",
-                    callback_data=f"b:{game['id']}"
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    "🛑 LEAVE GAME",
-                    callback_data=f"leave:{game['id']}"
-                )
-            ],
-        ])
-
-    if game["status"] == "results":
-        return InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton(
-                    "🔥 NEXT QUESTION",
-                    callback_data=f"next:{game['id']}"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "🛑 END GAME",
-                    callback_data=f"leave:{game['id']}"
-                )
-            ],
-        ])
-
-    return None
-
-
-# =========================================================
-# /START
-# =========================================================
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    username = context.bot.username or "YourBot"
-
-    text = (
-        "🎮 <b>WOULD YOU RATHER</b>\n\n"
-        "Play a 2-player Would You Rather game directly "
-        "inside your private chat.\n\n"
-        "🔥 <b>How to play:</b>\n\n"
-        f"1. Open your private chat with your friend.\n"
-        f"2. Type <code>@{username}</code>\n"
-        "3. Choose <b>🎮 Would You Rather</b>\n"
-        "4. Tap <b>START GAME</b>\n"
-        "5. Your friend taps <b>JOIN GAME</b>\n\n"
-        "No group chat needed. 😈"
-    )
-
-    await update.message.reply_text(
-        text,
-        parse_mode="HTML"
-    )
+        ]
+    ])
 
 
 # =========================================================
 # INLINE MODE
 # =========================================================
 
-async def inline_query(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.inline_query.query
 
-    keyboard = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(
-                "🎮 START GAME",
-                callback_data="create"
-            )
-        ]
-    ])
+    game_id = str(uuid.uuid4())[:8]
 
-    message = (
+    text = (
         "🎮 <b>WOULD YOU RATHER</b>\n\n"
-        "<i>2-player private game</i>\n\n"
-        "Tap <b>START GAME</b> to create a game."
+        "👥 <b>2-player private game</b>\n\n"
+        "Tap <b>START GAME</b> to create a game.\n\n"
+        "🔥 Challenge a friend and see what they choose!"
     )
 
     result = InlineQueryResultArticle(
-        id=str(uuid.uuid4()),
+        id=game_id,
         title="🎮 Would You Rather",
-        description="Start a 2-player game in this private chat",
+        description="Start a 2-player private game",
         input_message_content=InputTextMessageContent(
-            message,
+            text=text,
             parse_mode="HTML"
         ),
-        reply_markup=keyboard,
+        reply_markup=start_keyboard()
     )
 
     await update.inline_query.answer(
@@ -349,218 +202,407 @@ async def inline_query(
 
 
 # =========================================================
-# BUTTON HANDLER
+# CREATE GAME
 # =========================================================
 
-async def button_handler(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-
+async def create_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-
     await query.answer()
 
-    user = query.from_user
+    chat_id = query.message.chat_id
+    message_id = query.message.message_id
+
+    game_id = f"{chat_id}_{message_id}"
+
+    games[game_id] = {
+        "chat_id": chat_id,
+        "message_id": message_id,
+        "player1": None,
+        "player2": None,
+        "turn": None,
+        "question": None,
+        "question_number": 0,
+    }
+
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                "👤 JOIN GAME",
+                callback_data=f"join:{game_id}"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "❌ CANCEL",
+                callback_data=f"cancel:{game_id}"
+            )
+        ]
+    ])
+
+    await query.edit_message_text(
+        "🎮 <b>WOULD YOU RATHER</b>\n\n"
+        "🔥 <b>GAME CREATED!</b>\n\n"
+        "👥 This game needs 2 players.\n\n"
+        "Player 1: Waiting...\n"
+        "Player 2: Waiting...\n\n"
+        "Tap <b>JOIN GAME</b> to join.",
+        parse_mode="HTML",
+        reply_markup=keyboard
+    )
+
+
+# =========================================================
+# JOIN GAME
+# =========================================================
+
+async def join_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
     data = query.data
+    game_id = data.split(":", 1)[1]
 
-    # -----------------------------------------------------
-    # CREATE GAME
-    # -----------------------------------------------------
-
-    if data == "create":
-
-        game_id = uuid.uuid4().hex[:10]
-
-        question = new_question()
-
-        game = {
-            "id": game_id,
-            "inline_message_id": query.inline_message_id,
-            "p1_id": user.id,
-            "p1_name": player_name(user),
-            "p2_id": None,
-            "p2_name": None,
-            "round": 0,
-            "question": question,
-            "answers": {},
-            "status": "waiting",
-        }
-
-        games[game_id] = game
-
-        await query.edit_message_text(
-            game_text(game),
-            parse_mode="HTML",
-            reply_markup=game_keyboard(game),
-        )
-
-        return
-
-    # -----------------------------------------------------
-    # GET GAME ID
-    # -----------------------------------------------------
-
-    try:
-        action, game_id = data.split(":", 1)
-    except ValueError:
-        return
-
-    game = games.get(game_id)
-
-    if not game:
+    if game_id not in games:
         await query.answer(
             "❌ This game no longer exists.",
             show_alert=True
         )
         return
 
-    # -----------------------------------------------------
-    # LEAVE GAME
-    # -----------------------------------------------------
+    game = games[game_id]
 
-    if action == "leave":
+    user = query.from_user
 
-        if user.id not in [game["p1_id"], game["p2_id"]]:
-            await query.answer(
-                "You are not part of this game.",
-                show_alert=True
-            )
-            return
+    player = user.first_name
 
-        game["status"] = "ended"
+    # Player 1
+    if game["player1"] is None:
+        game["player1"] = {
+            "id": user.id,
+            "name": player
+        }
 
-        await query.edit_message_text(
-            "🛑 <b>GAME ENDED</b>\n\n"
-            "<i>This Would You Rather game has been closed.</i>",
-            parse_mode="HTML"
-        )
-
-        games.pop(game_id, None)
-
-        return
-
-    # -----------------------------------------------------
-    # JOIN GAME
-    # -----------------------------------------------------
-
-    if action == "join":
-
-        if game["status"] != "waiting":
-            await query.answer(
-                "❌ This game has already started.",
-                show_alert=True
-            )
-            return
-
-        if user.id == game["p1_id"]:
-            await query.answer(
-                "You are already Player 1.",
-                show_alert=True
-            )
-            return
-
-        game["p2_id"] = user.id
-        game["p2_name"] = player_name(user)
-        game["round"] = 1
-        game["status"] = "playing"
-        game["answers"] = {}
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(
+                    "👤 JOIN GAME",
+                    callback_data=f"join:{game_id}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "❌ CANCEL",
+                    callback_data=f"cancel:{game_id}"
+                )
+            ]
+        ])
 
         await query.edit_message_text(
-            game_text(game),
+            "🎮 <b>WOULD YOU RATHER</b>\n\n"
+            "🔥 <b>GAME CREATED!</b>\n\n"
+            f"👤 Player 1: <b>{player}</b>\n"
+            "👤 Player 2: <i>Waiting...</i>\n\n"
+            "Send this game to your friend!\n"
+            "They should tap <b>JOIN GAME</b>.",
             parse_mode="HTML",
-            reply_markup=game_keyboard(game),
+            reply_markup=keyboard
         )
 
         return
 
-    # -----------------------------------------------------
-    # ANSWER A / B
-    # -----------------------------------------------------
-
-    if action in ["a", "b"]:
-
-        if game["status"] != "playing":
-            await query.answer(
-                "❌ You cannot answer right now.",
-                show_alert=True
-            )
-            return
-
-        if user.id not in [game["p1_id"], game["p2_id"]]:
-            await query.answer(
-                "❌ You are not part of this game.",
-                show_alert=True
-            )
-            return
-
-        if user.id in game["answers"]:
-            await query.answer(
-                "✅ You already answered this round!",
-                show_alert=True
-            )
-            return
-
-        answer = "A" if action == "a" else "B"
-
-        game["answers"][user.id] = answer
-
-        # First player answered
-        if len(game["answers"]) == 1:
-
-            await query.edit_message_text(
-                game_text(game),
-                parse_mode="HTML",
-                reply_markup=game_keyboard(game),
-            )
-
-            return
-
-        # Both answered
-        if len(game["answers"]) == 2:
-
-            game["status"] = "results"
-
-            await query.edit_message_text(
-                game_text(game),
-                parse_mode="HTML",
-                reply_markup=game_keyboard(game),
-            )
-
-            return
-
-    # -----------------------------------------------------
-    # NEXT QUESTION
-    # -----------------------------------------------------
-
-    if action == "next":
-
-        if game["status"] != "results":
-            await query.answer(
-                "Wait until both players answer.",
-                show_alert=True
-            )
-            return
-
-        if user.id not in [game["p1_id"], game["p2_id"]]:
-            await query.answer(
-                "You are not part of this game.",
-                show_alert=True
-            )
-            return
-
-        game["round"] += 1
-        game["question"] = new_question()
-        game["answers"] = {}
-        game["status"] = "playing"
-
-        await query.edit_message_text(
-            game_text(game),
-            parse_mode="HTML",
-            reply_markup=game_keyboard(game),
+    # Don't allow same player twice
+    if game["player1"]["id"] == user.id:
+        await query.answer(
+            "You are already Player 1.",
+            show_alert=True
         )
+        return
+
+    # Player 2
+    if game["player2"] is None:
+        game["player2"] = {
+            "id": user.id,
+            "name": player
+        }
+
+        game["turn"] = game["player1"]["id"]
+
+        await start_round(query, game_id)
 
         return
+
+    # Game full
+    await query.answer(
+        "❌ This game already has 2 players.",
+        show_alert=True
+    )
+
+
+# =========================================================
+# START ROUND
+# =========================================================
+
+async def start_round(query, game_id):
+    game = games[game_id]
+
+    question = random.choice(QUESTIONS)
+
+    game["question"] = question
+    game["question_number"] += 1
+
+    player1 = game["player1"]
+    player2 = game["player2"]
+
+    if game["turn"] == player1["id"]:
+        current_player = player1
+    else:
+        current_player = player2
+
+    text = (
+        "🎮 <b>WOULD YOU RATHER</b>\n\n"
+        f"👤 <b>{player1['name']}</b>\n"
+        f"👤 <b>{player2['name']}</b>\n\n"
+        f"🔥 <b>ROUND {game['question_number']}</b>\n\n"
+        f"<b>{question[0]}</b>\n\n"
+        f"<b>OR</b>\n\n"
+        f"<b>{question[1]}</b>\n\n"
+        f"🎯 <b>{current_player['name']}'s turn</b>"
+    )
+
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                "🅰️ OPTION A",
+                callback_data=f"answer:A:{game_id}"
+            ),
+            InlineKeyboardButton(
+                "🅱️ OPTION B",
+                callback_data=f"answer:B:{game_id}"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "❌ END GAME",
+                callback_data=f"cancel:{game_id}"
+            )
+        ]
+    ])
+
+    await query.edit_message_text(
+        text,
+        parse_mode="HTML",
+        reply_markup=keyboard
+    )
+
+
+# =========================================================
+# ANSWER
+# =========================================================
+
+async def answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+
+    data = query.data.split(":")
+
+    choice = data[1]
+    game_id = ":".join(data[2:])
+
+    if game_id not in games:
+        await query.answer(
+            "❌ Game no longer exists.",
+            show_alert=True
+        )
+        return
+
+    game = games[game_id]
+
+    user = query.from_user
+
+    # Check whose turn
+    if user.id != game["turn"]:
+        current_player = (
+            game["player1"]
+            if game["turn"] == game["player1"]["id"]
+            else game["player2"]
+        )
+
+        await query.answer(
+            f"⏳ Wait! It's {current_player['name']}'s turn.",
+            show_alert=True
+        )
+        return
+
+    await query.answer()
+
+    question = game["question"]
+
+    if choice == "A":
+        chosen = question[0]
+    else:
+        chosen = question[1]
+
+    player1 = game["player1"]
+    player2 = game["player2"]
+
+    current_player = (
+        player1
+        if user.id == player1["id"]
+        else player2
+    )
+
+    # Switch turn
+    if user.id == player1["id"]:
+        game["turn"] = player2["id"]
+        next_player = player2
+    else:
+        game["turn"] = player1["id"]
+        next_player = player1
+
+    text = (
+        "🎮 <b>WOULD YOU RATHER</b>\n\n"
+        f"🔥 <b>{current_player['name']} chose:</b>\n\n"
+        f"👉 {chosen}\n\n"
+        "━━━━━━━━━━━━━━\n\n"
+        f"🎯 <b>{next_player['name']}'s turn!</b>\n\n"
+        "Get ready for the next question..."
+    )
+
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                "🔥 NEXT QUESTION",
+                callback_data=f"next:{game_id}"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "❌ END GAME",
+                callback_data=f"cancel:{game_id}"
+            )
+        ]
+    ])
+
+    await query.edit_message_text(
+        text,
+        parse_mode="HTML",
+        reply_markup=keyboard
+    )
+
+
+# =========================================================
+# NEXT QUESTION
+# =========================================================
+
+async def next_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+
+    game_id = query.data.split(":", 1)[1]
+
+    if game_id not in games:
+        await query.answer(
+            "❌ Game no longer exists.",
+            show_alert=True
+        )
+        return
+
+    game = games[game_id]
+
+    if query.from_user.id != game["turn"]:
+        current_player = (
+            game["player1"]
+            if game["turn"] == game["player1"]["id"]
+            else game["player2"]
+        )
+
+        await query.answer(
+            f"⏳ It's {current_player['name']}'s turn.",
+            show_alert=True
+        )
+        return
+
+    await query.answer()
+
+    await start_round(query, game_id)
+
+
+# =========================================================
+# CANCEL GAME
+# =========================================================
+
+async def cancel_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+
+    game_id = query.data.split(":", 1)[1]
+
+    if game_id not in games:
+        await query.answer()
+        return
+
+    game = games[game_id]
+
+    user = query.from_user
+
+    # Only players can end it
+    if (
+        game["player1"]
+        and user.id != game["player1"]["id"]
+        and game["player2"]
+        and user.id != game["player2"]["id"]
+    ):
+        await query.answer(
+            "❌ Only the players can end this game.",
+            show_alert=True
+        )
+        return
+
+    await query.answer()
+
+    del games[game_id]
+
+    await query.edit_message_text(
+        "🎮 <b>WOULD YOU RATHER</b>\n\n"
+        "❌ <b>GAME ENDED</b>\n\n"
+        "Thanks for playing! 🔥",
+        parse_mode="HTML"
+    )
+
+
+# =========================================================
+# CALLBACK ROUTER
+# =========================================================
+
+async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = update.callback_query.data
+
+    if data == "create_game":
+        await create_game(update, context)
+
+    elif data.startswith("join:"):
+        await join_game(update, context)
+
+    elif data.startswith("answer:"):
+        await answer(update, context)
+
+    elif data.startswith("next:"):
+        await next_question(update, context)
+
+    elif data.startswith("cancel:"):
+        await cancel_game(update, context)
+
+
+# =========================================================
+# START COMMAND
+# =========================================================
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "🎮 <b>WOULD YOU RATHER</b>\n\n"
+        "This is a 2-player game.\n\n"
+        "To play inside a Telegram chat, type:\n\n"
+        "<code>@YourBotUsername</code>\n\n"
+        "and select the Would You Rather game.",
+        parse_mode="HTML"
+    )
 
 
 # =========================================================
@@ -568,28 +610,21 @@ async def button_handler(
 # =========================================================
 
 def main():
+    app = Application.builder().token(TOKEN).build()
 
-    application = (
-        Application.builder()
-        .token(BOT_TOKEN)
-        .build()
-    )
+    app.add_handler(CommandHandler("start", start))
 
-    application.add_handler(
-        CommandHandler("start", start)
-    )
-
-    application.add_handler(
+    app.add_handler(
         InlineQueryHandler(inline_query)
     )
 
-    application.add_handler(
-        CallbackQueryHandler(button_handler)
+    app.add_handler(
+        CallbackQueryHandler(callback_handler)
     )
 
     print("🔥 Would You Rather bot is running...")
 
-    application.run_polling()
+    app.run_polling()
 
 
 if __name__ == "__main__":
