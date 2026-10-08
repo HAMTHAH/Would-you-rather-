@@ -96,7 +96,12 @@ def question_text(question, status_text=None):
     return text
 
 
+# =========================================================
+# ANSWER BUTTONS
+# =========================================================
+
 def answer_keyboard(game_id):
+
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton(
@@ -107,6 +112,22 @@ def answer_keyboard(game_id):
                 "🔵",
                 callback_data=f"ANSWER:B:{game_id}"
             ),
+        ]
+    ])
+
+
+# =========================================================
+# NEXT QUESTION BUTTON
+# =========================================================
+
+def next_question_keyboard():
+
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                "🔥 NEXT QUESTION",
+                switch_inline_query_current_chat=""
+            )
         ]
     ])
 
@@ -130,10 +151,12 @@ async def inline_query(update: Update, context):
         id=game_id,
         title="🎮 Would You Rather",
         description=f"🔴 {question[0]}  |  🔵 {question[1]}",
+
         input_message_content=InputTextMessageContent(
             question_text(question),
             parse_mode="HTML",
         ),
+
         reply_markup=answer_keyboard(game_id),
     )
 
@@ -157,11 +180,17 @@ async def answer(update: Update, context):
     choice = parts[1]
     game_id = parts[2]
 
+    # -----------------------------------------------------
+    # CHECK GAME
+    # -----------------------------------------------------
+
     if game_id not in games:
+
         await query.answer(
             "❌ This game has expired.",
             show_alert=True,
         )
+
         return
 
     game = games[game_id]
@@ -169,7 +198,7 @@ async def answer(update: Update, context):
     user = query.from_user
 
     # -----------------------------------------------------
-    # PREVENT SAME PERSON ANSWERING TWICE
+    # PREVENT DOUBLE ANSWER
     # -----------------------------------------------------
 
     if user.id in game["answers"]:
@@ -178,6 +207,7 @@ async def answer(update: Update, context):
             "You already answered this question! 😄",
             show_alert=True,
         )
+
         return
 
     # -----------------------------------------------------
@@ -194,16 +224,13 @@ async def answer(update: Update, context):
     )
 
     # -----------------------------------------------------
-    # ONLY ONE PLAYER HAS ANSWERED
+    # ONLY ONE PLAYER ANSWERED
     # -----------------------------------------------------
 
     if len(game["answers"]) == 1:
 
-        # Get the person who just answered
         player_name = user.first_name
 
-        # KEEP THE SAME QUESTION/PANEL
-        # Just add a small status message
         await query.edit_message_text(
             question_text(
                 game["question"],
@@ -216,7 +243,7 @@ async def answer(update: Update, context):
         return
 
     # -----------------------------------------------------
-    # BOTH PLAYERS HAVE ANSWERED
+    # BOTH PLAYERS ANSWERED
     # -----------------------------------------------------
 
     answers = list(game["answers"].values())
@@ -224,101 +251,42 @@ async def answer(update: Update, context):
     player1 = answers[0]
     player2 = answers[1]
 
-    choice1 = "🔴" if player1["choice"] == "R" else "🔵"
-    choice2 = "🔴" if player2["choice"] == "R" else "🔵"
+    choice1 = (
+        "🔴"
+        if player1["choice"] == "R"
+        else "🔵"
+    )
+
+    choice2 = (
+        "🔴"
+        if player2["choice"] == "R"
+        else "🔵"
+    )
 
     result_text = (
         "🎮 <b>WOULD YOU RATHER</b>\n\n"
+
         f"🔴 <b>{game['question'][0]}</b>\n\n"
+
         f"🔵 <b>{game['question'][1]}</b>\n\n"
+
         "━━━━━━━━━━━━━━\n\n"
+
         f"<b>{player1['name']}</b> {choice1}\n"
         f"<b>{player2['name']}</b> {choice2}\n\n"
+
         "🔥 <b>Both answered!</b>"
     )
 
-    keyboard = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(
-                "🔥 NEXT QUESTION",
-                callback_data=f"NEXT:{game_id}"
-            )
-        ]
-    ])
+    # -----------------------------------------------------
+    # SHOW RESULT + NEW QUESTION BUTTON
+    # -----------------------------------------------------
 
     await query.edit_message_text(
         result_text,
         parse_mode="HTML",
-        reply_markup=keyboard,
+        reply_markup=next_question_keyboard(),
     )
-
-
-# =========================================================
-# NEXT QUESTION
-# =========================================================
-
-async def next_question(update: Update, context):
-
-    query = update.callback_query
-
-    old_game_id = query.data.split(":", 1)[1]
-
-    if old_game_id not in games:
-        await query.answer(
-            "❌ Game expired.",
-            show_alert=True,
-        )
-        return
-
-    old_game = games[old_game_id]
-
-    # -----------------------------------------------------
-    # CREATE A COMPLETELY NEW GAME/PANEL
-    # -----------------------------------------------------
-
-    new_game_id = str(uuid.uuid4())
-
-    old_question = old_game["question"]
-
-    possible = [
-        q for q in QUESTIONS
-        if q != old_question
-    ]
-
-    new_question = random.choice(possible)
-
-    games[new_game_id] = {
-        "question": new_question,
-        "answers": {},
-    }
-
-    await query.answer()
-
-    # -----------------------------------------------------
-    # IMPORTANT:
-    # We DO NOT edit the old result panel.
-    #
-    # Telegram inline messages cannot create a brand-new
-    # message directly from a callback button, so we send
-    # the new question as a new message to the same chat.
-    # -----------------------------------------------------
-
-    if query.message:
-        try:
-            await context.bot.send_message(
-                chat_id=query.message.chat_id,
-                text=question_text(new_question),
-                parse_mode="HTML",
-                reply_markup=answer_keyboard(new_game_id),
-            )
-        except Exception:
-            # Inline messages don't always expose a normal
-            # chat_id. In that case, tell the user how to
-            # start another panel.
-            await query.answer(
-                "Use @wouldyouratherobot again for a new panel.",
-                show_alert=True,
-            )
 
 
 # =========================================================
@@ -330,10 +298,8 @@ async def callback_handler(update: Update, context):
     data = update.callback_query.data
 
     if data.startswith("ANSWER:"):
-        await answer(update, context)
 
-    elif data.startswith("NEXT:"):
-        await next_question(update, context)
+        await answer(update, context)
 
 
 # =========================================================
